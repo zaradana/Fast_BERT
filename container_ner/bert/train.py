@@ -152,21 +152,6 @@ def train():
 
         logger.info("Number of GPUs: {}".format(torch.cuda.device_count()))
 
-        # Create databunch
-        # databunch = BertNERDataBunch.from_jsonl(
-        #     DATA_PATH,
-        #     training_config["jsonl_file"],
-        #     tokenizer,
-        #     clear_cache=True,
-        #     batch_size_per_gpu=int(hyperparameters["train_batch_size"]),
-        #     max_seq_length=int(hyperparameters["max_seq_length"]),
-        #     multi_gpu=multi_gpu,
-        #     model_type=training_config["model_type"],
-        #     logger=logger,
-        #     use_fast_tokenizer=training_config["use_fast_tokenizer"],
-        #     train_size=training_config["train_size"],
-        #     random_state=training_config["random_state"],
-        # )
         databunch = BertNERDataBunch(
             data_dir=input_path,
             tokenizer=tokenizer,
