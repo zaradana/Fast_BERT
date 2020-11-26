@@ -30,7 +30,7 @@ Path(model_path).mkdir(exist_ok=True)
 def train(args):
     with mlflow.start_run():
         params = {}
-        for k,v in args:
+        for k,v in args.items():
             params[k] = v
         mlflow.log_params(params)
     
