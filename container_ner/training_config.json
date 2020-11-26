@@ -1,0 +1,16 @@
+{
+    "train_batch_size":64,
+    "max_seq_length":128,
+    "warmup_steps":10,
+    "epochs":1,
+    "lr":1,
+    "adam_epsilon":1,
+    "fp16":true,
+    "use_fast_tokenizer": true,
+    "model_type":"bert",
+    "fp16_opt_level":"O1",
+    "grad_accumulation_steps":1,
+    "logging_steps":1,
+    "save_steps":50,
+    "model_name":"distilbert-base-multilingual-cased"
+}

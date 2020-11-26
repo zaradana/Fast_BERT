@@ -1,7 +1,5 @@
 {
-    "python.formatting.provider": "black",
-    "python.pythonPath": "env/bin/python",
-    "python.linting.pylintEnabled": false,
-    "python.linting.flake8Enabled": true,
-    "python.linting.enabled": true
+    "python.pythonPath": "test/bin/python",
+    "python.condaPath": "/home/zara/anaconda3/bin/activate"
+
 }
