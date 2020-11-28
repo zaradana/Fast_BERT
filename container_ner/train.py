@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-import mlflow
-import mlflow.pytorch
-from mlflow.utils.environment import _mlflow_conda_env
-
+# import mlflow
+# import mlflow.pytorch
+# from mlflow.utils.environment import _mlflow_conda_env
 import os
 import json
 import pickle
@@ -20,87 +19,92 @@ from fast_bert.data_ner import BertNERDataBunch
 from fast_bert.learner_ner import BertNERLearner
 
 
-channel_name = "training"
-
 prefix = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(prefix, "data")
 model_path = os.path.join(prefix, "model")
 Path(model_path).mkdir(exist_ok=True)
 
 def train(args):
-    with mlflow.start_run():
-        params = {}
-        for k,v in args.items():
-            params[k] = v
-        mlflow.log_params(params)
-    
-        logger = logging.getLogger()
+    # params = {}
+    # for k,v in args.items():
+    #     params[k] = v
+    # mlflow.log_params(params)
 
-        model_name_path = args["model_name"]
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+        datefmt="%m/%d/%Y %H:%M:%S",
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ],
+    )
+    logger = logging.getLogger()
 
-        tokenizer = AutoTokenizer.from_pretrained(model_name_path, use_fast=True)
+    model_name_path = args["model_name"]
 
-        device = torch.device("cuda")
-        if torch.cuda.device_count() > 1:
-            multi_gpu = True
-        else:
-            multi_gpu = False
+    tokenizer = AutoTokenizer.from_pretrained(model_name_path, use_fast=True)
 
-        logger.info("Number of GPUs: {}".format(torch.cuda.device_count()))
+    device = torch.device("cuda")
+    if torch.cuda.device_count() > 1:
+        multi_gpu = True
+    else:
+        multi_gpu = False
 
-        databunch = BertNERDataBunch(
-            data_dir=data_path,
-            tokenizer=tokenizer,
-            batch_size_per_gpu=int(args["train_batch_size"]),
-            max_seq_length=int(args["max_seq_length"]),
-            multi_gpu=multi_gpu,
-            backend="nccl",
-            model_type=args["model_type"],
-            logger=logger,
-            clear_cache=True,
-            no_cache=False,
-            use_fast_tokenizer=args["use_fast_tokenizer"],
-            custom_sampler=None
-        )
+    logger.info("Number of GPUs: {}".format(torch.cuda.device_count()))
 
-        logger.info("databunch labels: {}".format(len(databunch.labels)))
+    databunch = BertNERDataBunch(
+        data_dir=data_path,
+        tokenizer=tokenizer,
+        batch_size_per_gpu=int(args["train_batch_size"]),
+        max_seq_length=int(args["max_seq_length"]),
+        multi_gpu=multi_gpu,
+        backend="nccl",
+        model_type=args["model_type"],
+        logger=logger,
+        clear_cache=True,
+        no_cache=False,
+        use_fast_tokenizer=args["use_fast_tokenizer"],
+        custom_sampler=None
+    )
 
-        # Initialise the learner
-        learner = BertNERLearner.from_pretrained_model(
-            databunch,
-            model_name_path,
-            output_dir=Path(model_path),
-            device=device,
-            logger=logger,
-            finetuned_wgts_path=None,
-            is_fp16=args["fp16"],
-            fp16_opt_level=args["fp16_opt_level"],
-            warmup_steps=int(args["warmup_steps"]),
-            grad_accumulation_steps=int(args["grad_accumulation_steps"]),
-            multi_gpu=multi_gpu,
-            logging_steps=int(args["logging_steps"]),
-            save_steps=int(args["save_steps"]),
-            adam_epsilon=int(args["adam_epsilon"])
-        )
+    logger.info("databunch labels: {}".format(len(databunch.labels)))
 
-        learner.fit(int(args["epochs"]), float(args["lr"]))
+    # Initialise the learner
+    learner = BertNERLearner.from_pretrained_model(
+        databunch,
+        model_name_path,
+        output_dir=Path(model_path),
+        device=device,
+        logger=logger,
+        finetuned_wgts_path=None,
+        is_fp16=args["fp16"],
+        fp16_opt_level=args["fp16_opt_level"],
+        warmup_steps=int(args["warmup_steps"]),
+        grad_accumulation_steps=int(args["grad_accumulation_steps"]),
+        multi_gpu=multi_gpu,
+        logging_steps=int(args["logging_steps"]),
+        save_steps=int(args["save_steps"]),
+        adam_epsilon=int(args["adam_epsilon"])
+    )
 
-        # Run validation
-        logger.info(learner.validate())
+    learner.fit(int(args["epochs"]), float(args["lr"]))
 
-        # save model and tokenizer artefacts
-        # learner.save_model()
+    # Run validation
+    logger.info(learner.validate())
 
-        # save model config file
-        with open(os.path.join(model_path, "model_config.json"), "w") as f:
-            json.dump(args, f)
+    # save model and tokenizer artefacts
+    # learner.save_model()
 
-        # save label file
-        with open(os.path.join(model_path, "labels.txt"), "w") as f:
-            f.write("\n".join(databunch.labels))
+    # save model config file
+    with open(os.path.join(model_path, "model_config.json"), "w") as f:
+        json.dump(args, f)
 
-        model_env = _mlflow_conda_env()
-        mlflow.pytorch.log_model(learner.model, "model", conda_env=model_env)
+    # save label file
+    with open(os.path.join(model_path, "labels.txt"), "w") as f:
+        f.write("\n".join(databunch.labels))
+
+    # model_env = _mlflow_conda_env()
+    # mlflow.pytorch.log_model(learner.model, "model", conda_env=model_env)
 
 if __name__ == "__main__":
     json_config_arg = '--json_config'

@@ -9,6 +9,6 @@ dependencies:
   - pip:
     - mlflow
     - azureml-mlflow
-    - transformers
+    - transformers==3.0.2
     - torch
     - fast-bert
