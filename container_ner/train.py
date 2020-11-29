@@ -24,7 +24,7 @@ run = Run.get_context()
 
 prefix = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(prefix, "data")
-model_path = os.path.join(prefix, "model")
+model_path = os.path.join(prefix, "models")
 Path(model_path).mkdir(exist_ok=True)
 
 def train(args):
@@ -44,7 +44,8 @@ def train(args):
 
     model_name_path = args["model_name"]
  
-    tokenizer = AutoTokenizer.from_pretrained(model_name_path, use_fast=True)
+    use_fast = args.get("do_lower_case", "False") == "True"
+    tokenizer = AutoTokenizer.from_pretrained(model_name_path, use_fast=use_fast)
 
     device = torch.device("cuda")
     if torch.cuda.device_count() > 1:
@@ -65,7 +66,7 @@ def train(args):
         logger=logger,
         clear_cache=True,
         no_cache=False,
-        use_fast_tokenizer=args["use_fast_tokenizer"],
+        use_fast_tokenizer=use_fast,
         custom_sampler=None
     )
 
@@ -79,8 +80,6 @@ def train(args):
         device=device,
         logger=logger,
         finetuned_wgts_path=None,
-        is_fp16=args["fp16"],
-        fp16_opt_level=args["fp16_opt_level"],
         warmup_steps=int(args["warmup_steps"]),
         grad_accumulation_steps=int(args["grad_accumulation_steps"]),
         multi_gpu=multi_gpu,
@@ -99,18 +98,15 @@ def train(args):
     run.log('eval_loss', evaluation_results['eval_loss'])
 
     # save model and tokenizer artefacts
-    learner.save_model()
-   
-    # output_dir = "./output"
-    # os.makedirs(output_dir, exist_ok=True)
-    # torch.save(learner.model, os.path.join(output_dir, 'model.pt'))
+    output_path = Path("./outputs")
+    learner.save_model(output_path)
 
     # save model config file
-    with open(os.path.join(output_dir, "model_config.json"), "w") as f:
+    with open(os.path.join(output_path, "model_config.json"), "w") as f:
         json.dump(args, f)
 
     # save label file
-    with open(os.path.join(output_dir, "labels.txt"), "w") as f:
+    with open(os.path.join(output_path, "labels.txt"), "w") as f:
         f.write("\n".join(databunch.labels))
 
  

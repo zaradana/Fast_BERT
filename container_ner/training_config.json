@@ -3,14 +3,13 @@
     "max_seq_length":128,
     "warmup_steps":10,
     "epochs":1,
-    "lr":1,
-    "adam_epsilon":1,
-    "fp16":true,
-    "use_fast_tokenizer": true,
+    "lr":0.5,
+    "adam_epsilon":0.2,
+    "use_fast_tokenizer": "True",
     "model_type":"bert",
-    "fp16_opt_level":"O1",
     "grad_accumulation_steps":1,
     "logging_steps":1,
     "save_steps":50,
-    "model_name":"distilbert-base-multilingual-cased"
+    "model_name":"distilbert-base-multilingual-cased",
+    "do_lower_case": "False"
 }

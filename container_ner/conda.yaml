@@ -2,13 +2,13 @@ name: fast-bert-ner
 channels:
   - conda-forge
 dependencies:
-  - python=3.7.8
+  - python=3.6.2
   - numpy>=1.17.0
   - pandas>=1.0.0
-  - scikit-learn=0.19.1
+  - scikit-learn=0.22.1
   - pip:
-    - mlflow
-    - azureml-mlflow
-    - transformers==3.0.2
+    - azureml-defaults 
     - torch
+    - nltk
+    - transformers==3.0.2
     - fast-bert

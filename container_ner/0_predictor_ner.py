@@ -1,22 +1,14 @@
-# Copyright (c) Microsoft. All rights reserved.
-# Licensed under the MIT license.
-
 import os
 import torch
-import json
 import numpy as np
-from azureml.core.model import Model
-from fast_bert.data_cls import BertDataBunch
-from fast_bert.data_ner import BertNERDataBunch
-from fast_bert.learner_cls import BertLearner
 from fast_bert.data_ner import BertNERDataBunch
 from torch import nn
+from seqeval.metrics import f1_score, precision_score, recall_score
 from typing import Dict, List, Optional, Tuple
 from fast_bert.learner_util import Learner
 from nltk import word_tokenize
 from transformers import (
     AutoConfig,
-    AutoTokenizer,
     AutoModelForTokenClassification,
     Trainer,
     TrainingArguments,
@@ -24,11 +16,6 @@ from transformers import (
     HfArgumentParser,
     logging
 )
-
-import warnings
-
-warnings.filterwarnings("ignore", message="numpy.dtype size changed")
-warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 def load_model(databunch, pretrained_path, finetuned_wgts_path, device):
 
@@ -188,88 +175,3 @@ def group_entities(entities: List[dict]) -> List[dict]:
                 entity_groups += [group_sub_entities(entity_group_disagg)]
 
     return entity_groups
-
-class BertNERPredictor(object):
-    def __init__(
-        self,
-        model_path,
-        label_path,
-        model_type="bert",
-        use_fast_tokenizer=True,
-        do_lower_case=True,
-        device=None,
-    ):
-        if device is None:
-            device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-        self.model_path = model_path
-        self.label_path = label_path
-        self.model_type = model_type
-        self.do_lower_case = do_lower_case
-        self.device = device
-
-        # Use auto-tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_path, use_fast= use_fast_tokenizer
-        )
-
-        self.learner = self.get_learner()
-
-    def get_learner(self):
-        databunch = BertNERDataBunch(
-            self.label_path,
-            self.tokenizer,
-            train_file=None,
-            val_file=None,
-            batch_size_per_gpu=32,
-            max_seq_length=512,
-            multi_gpu=False,
-            model_type=self.model_type,
-            no_cache=True,
-        )
-
-        learner = NERPredictor.from_pretrained_model(
-            databunch,
-            self.model_path,
-            device=self.device
-        )
-
-        return learner
-
-    def predict_batch(self, texts, group=True, exclude_entities=["O"]):
-        predictions = []
-
-        for text in texts:
-            pred = self.predict(text, group=group, exclude_entities=exclude_entities)
-            if pred:
-                predictions.append(pred)
-        return predictions
-
-    def predict(self, text, group=True, exclude_entities=["O"]):
-        predictions = self.learner.predict(
-            text, group=group, exclude_entities=exclude_entities
-        )
-        return predictions
-
-def init():
-    global model
-    # AZUREML_MODEL_DIR is an environment variable created during deployment.
-    model_path = os.path.join(os.getenv('AZUREML_MODEL_DIR'), "outputs")
-    with open(os.path.join(model_path, "model_config.json")) as f:
-        model_config = json.load(f)
-    
-    model = BertNERPredictor(
-        model_path=model_path,
-        label_path=model_path,
-        model_type=model_config["model_type"],
-        do_lower_case=model_config.get("do_lower_case", "False") == "True",
-        use_fast_tokenizer=model_config.get("use_fast_tokenizer", "True") == "True",
-        device='cpu'
-    )
-
-def run(input_data):
-    return model.predict(input_data)
-
-
-# init()
-# print(run("Steve went to Paris"))

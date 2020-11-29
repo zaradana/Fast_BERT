@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "test/bin/python",
+    "python.pythonPath": "/home/zara/Onedrive/multifit_ner/env/bin/python",
     "python.condaPath": "/home/zara/anaconda3/bin/activate"
 
 }
