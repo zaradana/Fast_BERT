@@ -2,6 +2,7 @@
 # import mlflow
 # import mlflow.pytorch
 # from mlflow.utils.environment import _mlflow_conda_env
+
 import os
 import json
 import pickle
@@ -18,6 +19,8 @@ from transformers import AutoTokenizer
 from fast_bert.data_ner import BertNERDataBunch
 from fast_bert.learner_ner import BertNERLearner
 
+from azureml.core.run import Run
+run = Run.get_context()
 
 prefix = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(prefix, "data")
@@ -25,10 +28,6 @@ model_path = os.path.join(prefix, "model")
 Path(model_path).mkdir(exist_ok=True)
 
 def train(args):
-    # params = {}
-    # for k,v in args.items():
-    #     params[k] = v
-    # mlflow.log_params(params)
 
     logging.basicConfig(
         level=logging.INFO,
@@ -40,8 +39,11 @@ def train(args):
     )
     logger = logging.getLogger()
 
-    model_name_path = args["model_name"]
+    for k,v in args.items():
+        run.log(k, v)
 
+    model_name_path = args["model_name"]
+ 
     tokenizer = AutoTokenizer.from_pretrained(model_name_path, use_fast=True)
 
     device = torch.device("cuda")
@@ -84,33 +86,41 @@ def train(args):
         multi_gpu=multi_gpu,
         logging_steps=int(args["logging_steps"]),
         save_steps=int(args["save_steps"]),
-        adam_epsilon=int(args["adam_epsilon"])
+        adam_epsilon=float(args["adam_epsilon"])
     )
 
     learner.fit(int(args["epochs"]), float(args["lr"]))
 
     # Run validation
-    logger.info(learner.validate())
+    evaluation_results = learner.validate()
+    run.log('eval_f1', evaluation_results['eval_f1'])
+    run.log('eval_recal', evaluation_results['eval_recall'])
+    run.log('eval_precision', evaluation_results['eval_precision'])
+    run.log('eval_loss', evaluation_results['eval_loss'])
 
     # save model and tokenizer artefacts
-    # learner.save_model()
+    learner.save_model()
+   
+    # output_dir = "./output"
+    # os.makedirs(output_dir, exist_ok=True)
+    # torch.save(learner.model, os.path.join(output_dir, 'model.pt'))
 
     # save model config file
-    with open(os.path.join(model_path, "model_config.json"), "w") as f:
+    with open(os.path.join(output_dir, "model_config.json"), "w") as f:
         json.dump(args, f)
 
     # save label file
-    with open(os.path.join(model_path, "labels.txt"), "w") as f:
+    with open(os.path.join(output_dir, "labels.txt"), "w") as f:
         f.write("\n".join(databunch.labels))
 
-    # model_env = _mlflow_conda_env()
-    # mlflow.pytorch.log_model(learner.model, "model", conda_env=model_env)
-
+ 
 if __name__ == "__main__":
-    json_config_arg = '--json_config'
-    if json_config_arg in sys.argv:
-        json_conf_index = sys.argv.index(json_config_arg)
-        with open(os.path.abspath(sys.argv[json_conf_index + 1])) as json_file:
-            args = json.load(json_file)
+    args = {}
+    for s in sys.argv:
+        if s == '--json_config':
+            with open(os.path.abspath(sys.argv[sys.argv.index(s) + 1])) as json_file:
+                args = json.load(json_file)
+        elif s.startswith('--'):
+            args[s.lstrip('--')] = sys.argv[sys.argv.index(s) + 1]
 
     train(args)
