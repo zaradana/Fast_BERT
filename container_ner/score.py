@@ -13,7 +13,7 @@ from fast_bert.data_ner import BertNERDataBunch
 from torch import nn
 from typing import Dict, List, Optional, Tuple
 from fast_bert.learner_util import Learner
-from nltk import word_tokenize
+import nltk
 from transformers import (
     AutoConfig,
     AutoTokenizer,
@@ -87,7 +87,7 @@ class NERPredictor():
         if exclude_entities is None:
             exclude_entities = []
 
-        words = word_tokenize(text)
+        words = nltk.word_tokenize(text)
         enc_words = []
         valid_tokens = []
         count = 0
@@ -252,6 +252,11 @@ class BertNERPredictor(object):
         return predictions
 
 def init():
+    try:
+        nltk.data.find('tokenizers/punkt')
+    except LookupError:
+        nltk.download('punkt')
+
     global model
     # AZUREML_MODEL_DIR is an environment variable created during deployment.
     model_path = os.path.join(os.getenv('AZUREML_MODEL_DIR'), "outputs")
