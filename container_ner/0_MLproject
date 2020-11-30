@@ -1,9 +1,0 @@
-name: fast-bert-ner
-
-conda_env: conda.yaml
-
-entry_points:
-  main:
-    parameters:
-      json_config: {type: string, default: "training_config.json"}
-    command: "python train.py --json_config {json_config}"

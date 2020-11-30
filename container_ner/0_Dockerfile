@@ -1,4 +1,0 @@
-FROM mcr.microsoft.com/azureml/openmpi3.1.2-cuda10.2-cudnn8-ubuntu18.04
-
-RUN pip install --upgrade pip
-RUN pip install numpy==1.17.0 pandas==1.0.0 scikit-learn mlflow azureml-mlflow transformers==3.0.2 torch fast-bert nltk==3.4.5
