@@ -141,7 +141,7 @@ def train():
             finetuned_model = None
 
         # use auto-tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(model_name_path, use_fast=True)
+        tokenizer = AutoTokenizer.from_pretrained( training_config["tokenizer_name"] if training_config["tokenizer_name"] else model_name_path, use_fast=True)
 
         device = torch.device("cuda")
         multi_gpu = False
