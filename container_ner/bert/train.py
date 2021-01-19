@@ -10,7 +10,7 @@ from pathlib import Path
 import logging
 import inspect
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 import torch
 from transformers import AutoTokenizer
@@ -27,12 +27,12 @@ run_start_time = datetime.datetime.today().strftime("%Y-%m-%d_%H-%M-%S")
 
 channel_name = "training"
 
-prefix = "./opt/ml/"
+prefix = "./opt_ner/ml/"
 input_path = prefix + "input/data"  # opt/ml/input/data
 code_path = prefix + "code"  # opt/ml/code
-pretrained_model_path = (
-    code_path + "/pretrained_models"
-)  # opt/ml/code/pretrained_models
+# pretrained_model_path = (
+#     code_path + "/pretrained_models"
+# )  # opt/ml/code/pretrained_models
 
 finetuned_path = input_path + "/{}/finetuned".format(
     channel_name
@@ -90,10 +90,12 @@ def train():
 
         # convert string bools to booleans
         training_config["fp16"] = training_config["fp16"] == "True"
+        training_config["pretrained_model_path"] = training_config.get("pretrained_model_path",None)
+
         training_config["use_fast_tokenizer"] = (
             training_config.get("use_fast_tokenizer", "True") == "True"
         )
-        training_config["jsonl_file"] = training_config.get("jsonl_file", "data.jsonl")
+        # training_config["jsonl_file"] = training_config.get("jsonl_file", "data.jsonl")
 
         training_config["random_state"] = (
             int(training_config.get("random_state"))
@@ -118,8 +120,8 @@ def train():
         logger = logging.getLogger()
 
         # Define pretrained model path
-        PRETRAINED_PATH = Path(pretrained_model_path) / training_config["model_name"]
-        if PRETRAINED_PATH.is_dir():
+        if training_config["pretrained_model_path"]:
+            PRETRAINED_PATH = Path(training_config["pretrained_model_path"]) # / training_config["model_name"]
             logger.info("model path used {}".format(PRETRAINED_PATH))
             model_name_path = str(PRETRAINED_PATH)
         else:
@@ -141,7 +143,10 @@ def train():
             finetuned_model = None
 
         # use auto-tokenizer
-        tokenizer = AutoTokenizer.from_pretrained( training_config["tokenizer_name"] if training_config["tokenizer_name"] else model_name_path, use_fast=True)
+        tokenizer = AutoTokenizer.from_pretrained(training_config["tokenizer_name"] 
+                if training_config["tokenizer_name"] else training_config["model_name_path"], 
+                use_fast=training_config["use_fast_tokenizer"], do_lower_case=training_config["do_lower_case"],
+                cache_dir=str(output_path))
 
         device = torch.device("cuda")
         multi_gpu = False

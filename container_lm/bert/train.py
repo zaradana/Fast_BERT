@@ -8,12 +8,12 @@ import traceback
 import pandas as pd
 import datetime
 from pathlib import Path
-
 import logging
 import math
 from dataclasses import dataclass, field
 from typing import Optional
-
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 import torch
 
 from transformers import (
@@ -36,7 +36,7 @@ run_start_time = datetime.datetime.today().strftime("%Y-%m-%d_%H-%M-%S")
 
 channel_name = "training"
 
-prefix = "/opt/ml/"
+prefix = "./opt/ml/"
 input_path = prefix + "input/data"  # opt/ml/input/data
 code_path = prefix + "code"  # opt/ml/code
 
@@ -55,7 +55,7 @@ config_path = os.path.join(
 )  # opt/ml/input/data/training/config/training_config.json
 
 
-training_path = os.path.join(input_path, channel_name)  # opt/ml/input/data/training
+training_path = input_path #os.path.join(input_path, channel_name)  # opt/ml/input/data/training
 
 MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
@@ -116,14 +116,14 @@ class DataTrainingArguments:
         },
     )
     line_by_line: bool = field(
-        default=False,
+        default=True,
         metadata={
             "help": "Whether distinct lines of text in the dataset are to be handled as distinct sequences."
         },
     )
 
     mlm: bool = field(
-        default=False,
+        default=True,
         metadata={
             "help": "Train with masked-language modeling loss instead of language modeling."
         },
@@ -198,6 +198,8 @@ def train():
         training_config["val_file"] = training_config.get("val_file", "val.csv")
         training_config["fp16"] = training_config["fp16"] == "True"
         training_config["line_by_line"] = training_config["line_by_line"] == "True"
+        training_config["do_lower_case"] = training_config["do_lower_case"] == "True"
+        training_config["tokenizer_name"] = training_config["tokenizer_name"] 
         training_config["use_fast_tokenizer"] = (
             training_config.get("use_fast_tokenizer", "True") == "True"
         )
@@ -213,7 +215,7 @@ def train():
             else None
         )
 
-        training_config["train_size"] = float(training_config.get("train_size", 0.8))
+        # training_config["train_size"] = float(training_config.get("train_size", 0.8))
 
         data_args = DataTrainingArguments(
             train_data_file=str(DATA_PATH / training_config["train_file"]),
@@ -240,6 +242,7 @@ def train():
             seed=training_config["random_state"],
             num_train_epochs=int(hyperparameters["epochs"]),
             learning_rate=float(hyperparameters["lr"]),
+            adam_epsilon=int(hyperparameters["adam_epsilon"]),
             save_steps=0,
         )
 
@@ -260,10 +263,14 @@ def train():
         set_seed(training_args.seed)
 
         # use auto-tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(
-            training_config["model_name"],
-            use_fast=training_config["use_fast_tokenizer"],
-        )
+        # tokenizer = AutoTokenizer.from_pretrained(
+        #     training_config["model_name"],
+        #     use_fast=training_config["use_fast_tokenizer"],
+        # )
+        tokenizer = AutoTokenizer.from_pretrained(training_config["tokenizer_name"] 
+                if training_config["tokenizer_name"] else training_config["model_name_path"], 
+                use_fast=training_config["use_fast_tokenizer"], do_lower_case=training_config["do_lower_case"],
+                cache_dir=str(output_path))
 
         config = AutoConfig.from_pretrained(training_config["model_name"])
 

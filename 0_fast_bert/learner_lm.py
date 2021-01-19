@@ -24,7 +24,6 @@ from transformers import (
     ElectraForMaskedLM,
 )
 
-
 MODEL_CLASSES = {
     "bert": (BertConfig, BertForMaskedLM),
     "roberta": (RobertaConfig, RobertaForMaskedLM),
@@ -32,7 +31,6 @@ MODEL_CLASSES = {
     "camembert-base": (CamembertConfig, CamembertForMaskedLM),
     "electra": (ElectraConfig, ElectraForMaskedLM),
 }
-
 
 class BertLMLearner(Learner):
     @staticmethod
