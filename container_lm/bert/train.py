@@ -54,12 +54,10 @@ config_path = os.path.join(
     training_config_path, "training_config.json"
 )  # opt/ml/input/data/training/config/training_config.json
 
-
 training_path = input_path #os.path.join(input_path, channel_name)  # opt/ml/input/data/training
 
 MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
-
 
 @dataclass
 class ModelArguments:
@@ -98,7 +96,6 @@ class ModelArguments:
             "help": "Where do you want to store the pretrained models downloaded from s3"
         },
     )
-
 
 @dataclass
 class DataTrainingArguments:
@@ -158,7 +155,6 @@ class DataTrainingArguments:
         metadata={"help": "Overwrite the cached training and evaluation sets"},
     )
 
-
 def get_dataset(
     args: DataTrainingArguments, tokenizer: PreTrainedTokenizer, evaluate=False
 ):
@@ -174,7 +170,6 @@ def get_dataset(
             block_size=args.block_size,
             overwrite_cache=args.overwrite_cache,
         )
-
 
 # The function to execute the training.
 def train():
@@ -196,26 +191,15 @@ def train():
         # convert string bools to booleans
         training_config["train_file"] = training_config.get("train_file", "train.csv")
         training_config["val_file"] = training_config.get("val_file", "val.csv")
-        training_config["fp16"] = training_config["fp16"] == "True"
+        # training_config["fp16"] = training_config["fp16"] == "True"
         training_config["line_by_line"] = training_config["line_by_line"] == "True"
         training_config["do_lower_case"] = training_config["do_lower_case"] == "True"
         training_config["tokenizer_name"] = training_config["tokenizer_name"] 
-        training_config["use_fast_tokenizer"] = (
-            training_config.get("use_fast_tokenizer", "True") == "True"
-        )
+        training_config["use_fast_tokenizer"] = (training_config.get("use_fast_tokenizer", "True") == "True")
         training_config["mlm"] = training_config["mlm"] == "True"
-        training_config["mlm_probability"] = float(
-            training_config.get("mlm_probability", 0.15)
-        )
+        training_config["mlm_probability"] = float(training_config.get("mlm_probability", 0.15))
         training_config["block_size"] = int(training_config.get("block_size", -1))
-
-        training_config["random_state"] = (
-            int(training_config.get("random_state"))
-            if training_config.get("random_state")
-            else None
-        )
-
-        # training_config["train_size"] = float(training_config.get("train_size", 0.8))
+        training_config["random_state"] = (int(training_config.get("random_state")) if training_config.get("random_state") else None)
 
         data_args = DataTrainingArguments(
             train_data_file=str(DATA_PATH / training_config["train_file"]),
@@ -237,7 +221,7 @@ def train():
             gradient_accumulation_steps=int(training_config["grad_accumulation_steps"]),
             warmup_steps=int(hyperparameters["warmup_steps"]),
             logging_steps=int(training_config["logging_steps"]),
-            fp16=training_config["fp16"],
+            fp16=False,
             fp16_opt_level=training_config["fp16_opt_level"],
             seed=training_config["random_state"],
             num_train_epochs=int(hyperparameters["epochs"]),
@@ -262,34 +246,21 @@ def train():
 
         set_seed(training_args.seed)
 
-        # use auto-tokenizer
-        # tokenizer = AutoTokenizer.from_pretrained(
-        #     training_config["model_name"],
-        #     use_fast=training_config["use_fast_tokenizer"],
-        # )
         tokenizer = AutoTokenizer.from_pretrained(training_config["tokenizer_name"] 
                 if training_config["tokenizer_name"] else training_config["model_name_path"], 
                 use_fast=training_config["use_fast_tokenizer"], do_lower_case=training_config["do_lower_case"],
                 cache_dir=str(output_path))
 
         config = AutoConfig.from_pretrained(training_config["model_name"])
-
-        model = AutoModelWithLMHead.from_pretrained(
-            training_config["model_name"], config=config
-        )
+        model = AutoModelWithLMHead.from_pretrained(training_config["model_name"], config=config)
         model.resize_token_embeddings(len(tokenizer))
 
-        if (
-            config.model_type in ["bert", "roberta", "distilbert", "camembert"]
-            and not data_args.mlm
-        ):
-            raise ValueError(
-                "BERT and RoBERTa-like models do not have LM heads but masked LM heads. They must be run using the"
-                "--mlm flag (masked language modeling)."
-            )
+        if (config.model_type in ["bert", "roberta", "distilbert", "camembert"] and not data_args.mlm):
+            raise ValueError("BERT and RoBERTa-like models do not have LM heads but masked LM heads. They must be run using the"
+                "--mlm flag (masked language modeling).")
 
         if data_args.block_size <= 0:
-            data_args.block_size = tokenizer.max_len
+           data_args.block_size = tokenizer.max_len
             # Our input block size will be the max possible for the model
         else:
             data_args.block_size = min(data_args.block_size, tokenizer.max_len)
@@ -312,7 +283,8 @@ def train():
             data_collator=data_collator,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
-            prediction_loss_only=True,
+            prediction_loss_only=True,        
+            tb_writer = None
         )
 
         # Run pre-validation
@@ -348,7 +320,6 @@ def train():
         # A non-zero exit code causes the training job to be marked as Failed.
         sys.exit(255)
 
-
 def validate(trainer: Trainer, logger):
     results = {}
     eval_output = trainer.evaluate()
@@ -359,7 +330,6 @@ def validate(trainer: Trainer, logger):
     results.update(result)
 
     return results
-
 
 if __name__ == "__main__":
     train()
