@@ -60,3 +60,25 @@ f.close()
 fo.close()
 
 # %%
+file_ext = "train.txt"
+output_filename = './opt/ml/input/data/'+file_ext
+fo = open(output_filename, "w")
+
+fname = './opt_ner/ml/input/data/'+file_ext
+text = []
+sent =[]
+f = open(fname, "r")
+for line in f:
+    splits = line.split(' ')
+    if splits[0] != "\n":
+        sent.append(splits[0])
+    elif len(sent) > 0:
+        if len(sent) > 30:
+            fo.write(' '.join(sent)+"\n")
+            print(' '.join(sent))
+        sent=[]
+f.close()
+
+fo.close()
+
+# %%

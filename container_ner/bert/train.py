@@ -49,7 +49,7 @@ hyperparam_path = os.path.join(
     prefix, "input/config/hyperparameters.json"
 )  # opt/ml/input/config/hyperparameters.json
 config_path = os.path.join(
-    training_config_path, "training_config.json"
+    training_config_path, "training_config_2.json"
 )  # opt/ml/input/data/training/config/training_config.json
 
 
